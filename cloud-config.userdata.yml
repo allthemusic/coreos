@@ -1,0 +1,41 @@
+#cloud-config
+
+coreos:
+  etcd:
+    # generate a new token for each unique cluster from https://discovery.etcd.io/new
+    discovery: https://discovery.etcd.io/<clusterid>
+    # multi-region and multi-cloud deployments need to use $public_ipv4
+    addr: $public_ipv4:4001
+    peer-addr: $public_ipv4:7001
+  update:
+    reboot-strategy: best-effort
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+    - name: docker-ipfs-daemon.service
+      command: start
+      content: |
+        [Unit]
+        Description=IPFS Daemon
+        Author=ryan@rtlong.com
+        After=docker.service
+
+        [Service]
+        Restart=always
+        TimeoutStartSec=600
+        ExecStartPre=/usr/bin/docker pull jbenet/go-ipfs:latest
+        ExecStartPre=-/usr/bin/docker rm -f ipfs-daemon
+        ExecStartPre=-/usr/bin/docker run -v /ipfs -e IPFS_PATH=/ipfs --name ipfs-daemon-data --entrypoint=/go/bin/ipfs jbenet/go-ipfs:latest init
+        ExecStartPre=/usr/bin/docker run --rm --volumes-from ipfs-daemon-data -v /media/ipfs-config-rewrite.jq:/script.jq realguess/jq /bin/sh -c 'cat /ipfs/config | jq -f /script.jq > /ipfs/config'
+        ExecStart=/usr/bin/docker run --rm --name=ipfs-daemon -p 4004:4004 -p 4002:4002/udp -p 5001:5001 -p 8080:8080 -e IPFS_PATH=/ipfs --volumes-from ipfs-daemon-data --entrypoint=/go/bin/ipfs jbenet/go-ipfs:latest daemon
+
+        ExecStop=/usr/bin/docker stop -t 2 ipfs-daemon
+
+write_files:
+  - path: /media/ipfs-config-rewrite.jq
+    permissions: 0644
+    owner: root
+    content: |
+      .Addresses.Swarm[0] = "/ip4/0.0.0.0/tcp/4004" | .Addresses.API = "/ip4/0.0.0.0/tcp/5001" | .Addresses.Gateway = "/ip4/0.0.0.0/tcp/8080"
