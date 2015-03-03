@@ -5,11 +5,16 @@ Bundler.require
 
 require 'open-uri'
 
+SSH_KEY_ID = ENV.fetch('DIGITALOCEAN_SSH_KEY_ID')
+
+IMAGES = {
+  coreos_stable: 10679356,
+  coreos_beta: 10692842,
+}
+
 NODE_COUNT = 3
 
 DOMAIN_NAME = ENV.fetch('CLUSTER_DOMAIN', 'allthemusic.org')
-
-client = DropletKit::Client.new(access_token: ENV.fetch('DIGITALOCEAN_API_TOKEN'))
 
 def user_data
   return @user_data if defined?(@user_data)
@@ -28,18 +33,19 @@ def cluster_discovery_address
   @cluster_discovery_address
 end
 
-
 def node_data(nodeid)
   {
     name: format("core-%02d.%s", nodeid, DOMAIN_NAME),
     region: "sfo1",
     size: "2gb",
-    image: "10679356",
+    image: IMAGES[:coreos_beta],
     user_data: user_data,
-    ssh_keys: [236464],
+    ssh_keys: [SSH_KEY_ID],
     ipv6: true,
   }
 end
+
+client = DropletKit::Client.new(access_token: ENV.fetch('DIGITALOCEAN_API_TOKEN'))
 
 nodes = NODE_COUNT.times.map { |nodeid|
   droplet = DropletKit::Droplet.new(node_data(nodeid + 1))
