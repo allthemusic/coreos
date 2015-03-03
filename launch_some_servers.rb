@@ -3,22 +3,43 @@
 require 'bundler/setup'
 Bundler.require
 
+require 'open-uri'
+
 NODE_COUNT = 3
+
+DOMAIN_NAME = ENV.fetch('CLUSTER_DOMAIN', 'allthemusic.org')
 
 client = DropletKit::Client.new(access_token: ENV.fetch('DIGITALOCEAN_API_TOKEN'))
 
+def user_data
+  return @user_data if defined?(@user_data)
+  file = File.read(File.expand_path('../cloud-config.userdata.yml', __FILE__))
+  @user_data ||= file.gsub('{{discovery_url}}', cluster_discovery_address)
+end
+
+def cluster_discovery_address
+  return @cluster_discovery_address if defined?(@cluster_discovery_address)
+  if (@cluster_discovery_address = ARGV.shift)
+    URI.parse(@cluster_discovery_address)
+  else
+    @cluster_discovery_address = open('https://discovery.etcd.io/new').read
+    puts "Cluster Discovery Address = #{@cluster_discovery_address}"
+  end
+  @cluster_discovery_address
+end
+
+
 def node_data(nodeid)
   {
-    name: format("core-%02d.allthemusic.org", nodeid),
+    name: format("core-%02d.%s", nodeid, DOMAIN_NAME),
     region: "sfo1",
     size: "2gb",
     image: "10679356",
-    user_data: File.read(File.expand_path('../cloud-config.userdata.yml', __FILE__)),
+    user_data: user_data,
     ssh_keys: [236464],
     ipv6: true,
   }
 end
-
 
 nodes = NODE_COUNT.times.map { |nodeid|
   droplet = DropletKit::Droplet.new(node_data(nodeid + 1))
