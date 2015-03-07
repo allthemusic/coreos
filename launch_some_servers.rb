@@ -8,8 +8,9 @@ require 'open-uri'
 SSH_KEY_ID = ENV.fetch('DIGITALOCEAN_SSH_KEY_ID')
 
 IMAGES = {
-  coreos_stable: 10679356,
-  coreos_beta: 10692842,
+  coreos_stable: 'coreos-stable',
+  coreos_beta: 'coreos-beta',
+  coreos_alpha: 'coreos-alpha',
 }
 
 NODE_COUNT = 3
