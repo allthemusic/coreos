@@ -28,7 +28,7 @@ coreos:
         ExecStartPre=/usr/bin/docker pull jbenet/go-ipfs:latest
         ExecStartPre=-/usr/bin/docker rm -f ipfs-daemon
         ExecStartPre=-/usr/bin/docker run -v /ipfs -e IPFS_PATH=/ipfs --name ipfs-daemon-data --entrypoint=/go/bin/ipfs jbenet/go-ipfs:latest init
-        ExecStartPre=/usr/bin/docker run --rm --volumes-from ipfs-daemon-data -v /media/ipfs-config-rewrite.jq:/script.jq realguess/jq /bin/sh -c 'cat /ipfs/config | jq -f /script.jq > /ipfs/config'
+        ExecStartPre=/usr/bin/docker run --rm --volumes-from ipfs-daemon-data -v /media/ipfs-config-rewrite.jq:/script.jq realguess/jq /bin/sh -c 'cp /ipfs/config /tmp/config && jq -f /script.jq < /tmp/config > /ipfs/config'
         ExecStart=/usr/bin/docker run --rm --name=ipfs-daemon -p 4004:4004 -p 4002:4002/udp -p 5001:5001 -p 8080:8080 -e IPFS_PATH=/ipfs --volumes-from ipfs-daemon-data --entrypoint=/go/bin/ipfs jbenet/go-ipfs:latest daemon
 
         ExecStop=/usr/bin/docker stop -t 2 ipfs-daemon
