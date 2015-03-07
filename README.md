@@ -4,6 +4,8 @@ This is just a small script to create some DigitalOcean Droplets running IPFS on
 
 (Note that the "manually connected" aspect is not yet implemented.)
 
+**IMPORTANT: This leaves the IPFS API endpoint completely exposed, by default. Don't use this as-is for anything you care about.**
+
 ## Usage
 
 1. `bundle install` - Use a ruby >= 2.0
