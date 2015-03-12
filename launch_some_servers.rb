@@ -138,3 +138,7 @@ File.open('last_batch.json', 'w') do |file|
   }
   file.puts Oj.dump(data, mode: :compat, indent: 2)
 end
+
+puts
+puts 'Use this to add these domains to /etc/hosts'
+puts %q{ (echo ; jq -r '.nodes[] | "\(.ip_address)\t\(.name)"' < last_batch.json) >> /etc/hosts" }
