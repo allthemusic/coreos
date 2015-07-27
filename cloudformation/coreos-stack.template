@@ -1,0 +1,389 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Internal tools running on CoreOS, including Dimwit Production",
+  "Parameters": {
+    "AllowSSHFrom": {
+      "Description": "The net block (CIDR) that SSH is available to.",
+      "Default": "0.0.0.0/0",
+      "Type": "String"
+    },
+    "InstanceType": {
+      "Description": "EC2 HVM instance type (m3.medium, etc).",
+      "Type": "String",
+      "Default": "m3.medium",
+      "ConstraintDescription": "Must be a valid EC2 HVM instance type."
+    },
+    "ClusterSize": {
+      "Default": "3",
+      "MinValue": "3",
+      "Description": "Number of nodes in cluster (3-12).",
+      "Type": "Number"
+    },
+    "DiscoveryURL": {
+      "Description": "An unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new?size=<your cluster size>",
+      "Type": "String"
+    },
+    "KeyPair": {
+      "Description": "The name of an EC2 Key Pair to allow SSH access to the instance.",
+      "Type": "String"
+    }
+  },
+  "Mappings": {
+    "RegionMap": {
+      "eu-central-1": { "AMI": "ami-9c2b1181" },
+      "ap-northeast-1": { "AMI": "ami-28fb5228" },
+      "us-gov-west-1": { "AMI": "ami-13345730" },
+      "sa-east-1": { "AMI": "ami-d59418c8" },
+      "ap-southeast-2": { "AMI": "ami-ad115697" },
+      "ap-southeast-1": { "AMI": "ami-3ce1e16e" },
+      "us-east-1": { "AMI": "ami-f375bc98" },
+      "us-west-2": { "AMI": "ami-1ffbfb2f" },
+      "us-west-1": { "AMI": "ami-ef9261ab" },
+      "eu-west-1": { "AMI": "ami-16b2ff61" }
+    },
+    "SubnetConfig": {
+      "VPC": {
+        "CIDR": "10.0.0.0/16"
+      }
+    }
+  },
+  "Resources": {
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "CidrBlock": { "Fn::FindInMap": [ "SubnetConfig", "VPC", "CIDR" ] },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    },
+    "Subnet1a": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "AvailabilityZone": "us-east-1a",
+        "CidrBlock": "10.0.0.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    },
+    "Subnet1c": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "AvailabilityZone": "us-east-1c",
+        "CidrBlock": "10.0.1.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    },
+    "Subnet1d": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "AvailabilityZone": "us-east-1d",
+        "CidrBlock": "10.0.2.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    },
+    "Subnet1e": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "AvailabilityZone": "us-east-1e",
+        "CidrBlock": "10.0.3.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    },
+    "GatewayToInternet": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "InternetGatewayId": { "Ref": "InternetGateway" }
+      }
+    },
+    "PrimaryRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    },
+    "PrimaryRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "GatewayToInternet",
+      "Properties": {
+        "RouteTableId": { "Ref": "PrimaryRouteTable" },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": { "Ref": "InternetGateway" }
+      }
+    },
+    "PrimarySubnetRouteTableAssociation1a": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "Subnet1a" },
+        "RouteTableId": { "Ref": "PrimaryRouteTable" }
+      }
+    },
+    "PrimarySubnetRouteTableAssociation1c": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "Subnet1c" },
+        "RouteTableId": { "Ref": "PrimaryRouteTable" }
+      }
+    },
+    "PrimarySubnetRouteTableAssociation1d": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "Subnet1d" },
+        "RouteTableId": { "Ref": "PrimaryRouteTable" }
+      }
+    },
+    "PrimarySubnetRouteTableAssociation1e": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "Subnet1e" },
+        "RouteTableId": { "Ref": "PrimaryRouteTable" }
+      }
+    },
+    "EC2SecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Enable access to the EC2 host",
+        "VpcId": { "Ref": "VPC" },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp":{ "Ref": "AllowSSHFrom" }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "SourceSecurityGroupId": { "Fn::GetAtt": [ "ELBSecurityGroup", "GroupId" ] }
+          }
+        ]
+      }
+    },
+    "IngressEtcdLegacyCompat": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "EC2SecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "4001",
+        "ToPort": "4001",
+        "SourceSecurityGroupId": { "Fn::GetAtt": [ "EC2SecurityGroup", "GroupId" ] }
+      }
+    },
+    "IngressEtcdNew": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "EC2SecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "2379",
+        "ToPort": "2380",
+        "SourceSecurityGroupId": { "Fn::GetAtt": [ "EC2SecurityGroup", "GroupId" ] }
+      }
+    },
+    "IngressInterClusterSSH": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "EC2SecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "22",
+        "ToPort": "22",
+        "SourceSecurityGroupId": { "Fn::GetAtt": [ "EC2SecurityGroup", "GroupId" ] }
+      }
+    },
+    "IngressInterClusterServices": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "EC2SecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "3000",
+        "ToPort": "3999",
+        "SourceSecurityGroupId": { "Fn::GetAtt": [ "EC2SecurityGroup", "GroupId" ] }
+      }
+    },
+    "IngressIPFSPeer": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "EC2SecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "8001",
+        "ToPort": "8001",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ELBSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Security group for ELB",
+        "VpcId": { "Ref": "VPC" },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "CoreOSServerAutoScale": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "VPCZoneIdentifier": [
+          { "Ref": "Subnet1a" },
+          { "Ref": "Subnet1c" },
+          { "Ref": "Subnet1d" },
+          { "Ref": "Subnet1e" }
+        ],
+        "LaunchConfigurationName": { "Ref": "CoreOSServerLaunchConfig" },
+        "LoadBalancerNames": [
+          { "Ref": "ELB" }
+        ],
+        "MinSize": "3",
+        "MaxSize": "5",
+        "DesiredCapacity": { "Ref": "ClusterSize" },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" },
+            "PropagateAtLaunch": true
+          }
+        ]
+      }
+    },
+    "CoreOSServerLaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId": { "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "AMI" ] },
+        "InstanceType": { "Ref": "InstanceType" },
+        "KeyName": { "Ref": "KeyPair" },
+        "SecurityGroups": [
+          { "Ref": "EC2SecurityGroup" }
+        ],
+        "AssociatePublicIpAddress": true,
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#cloud-config\n\n",
+                "coreos:\n",
+                "  etcd2:\n",
+                "    discovery: ", { "Ref": "DiscoveryURL" }, "\n",
+                "    advertise-client-urls: http://$private_ipv4:2379\n",
+                "    initial-advertise-peer-urls: http://$private_ipv4:2380\n",
+                "    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001\n",
+                "    listen-peer-urls: http://$private_ipv4:2380\n",
+                "  units:\n",
+                "    - name: etcd2.service\n",
+                "      command: start\n",
+                "    - name: fleet.service\n",
+                "      command: start\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "ELB": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "ConnectionDrainingPolicy" : {
+          "Enabled" : true,
+          "Timeout" : 5
+        },
+        "ConnectionSettings" : {
+          "IdleTimeout" : 900
+        },
+        "CrossZone" : true,
+        "HealthCheck" : {
+          "HealthyThreshold" : "2",
+          "Interval" : "5",
+          "Target" : "TCP:80",
+          "Timeout" : "4",
+          "UnhealthyThreshold" : "2"
+        },
+        "Listeners" : [
+          {
+            "InstancePort" : "80",
+            "InstanceProtocol" : "HTTP",
+            "LoadBalancerPort" : "80",
+            "Protocol" : "HTTP"
+          }
+        ],
+        "Scheme" : "internet-facing",
+        "SecurityGroups" : [
+          { "Ref": "ELBSecurityGroup" }
+        ],
+        "Subnets" : [
+          { "Ref": "Subnet1a" },
+          { "Ref": "Subnet1c" },
+          { "Ref": "Subnet1d" },
+          { "Ref": "Subnet1e" }
+        ],
+        "Tags" : [
+          {
+            "Key": "Name",
+            "Value": { "Ref": "AWS::StackName" }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": { }
+}

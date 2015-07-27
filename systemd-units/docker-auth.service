@@ -1,0 +1,13 @@
+[Unit]
+Description=Authenticate Docker to Docker Hub by running docker login with credentials stored in etcd
+After=docker.service
+Requires=docker.service
+
+[Service]
+User=core
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c '/usr/bin/docker login --email=$(/usr/bin/etcdctl get /docker/auth/email) --username=$(/usr/bin/etcdctl get /docker/auth/user) --password=$(/usr/bin/etcdctl get /docker/auth/password)'
+
+[X-Fleet]
+Global=true
