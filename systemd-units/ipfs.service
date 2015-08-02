@@ -7,7 +7,7 @@ Requires=docker.service
 Restart=always
 TimeoutStartSec=0
 ExecStartPre=-/usr/bin/docker rm -f ipfs
-ExecStartPre=/usr/bin/docker rm -f ipfs-data
+ExecStartPre=-/usr/bin/docker rm -f ipfs-data
 ExecStartPre=-/usr/bin/docker pull jbenet/go-ipfs
 ExecStartPre=/usr/bin/docker run \
   --name ipfs-data \

@@ -14,8 +14,8 @@
       "ConstraintDescription": "Must be a valid EC2 HVM instance type."
     },
     "ClusterSize": {
-      "Default": "3",
-      "MinValue": "3",
+      "Default": "1",
+      "MinValue": "1",
       "Description": "Number of nodes in cluster (3-12).",
       "Type": "Number"
     },
@@ -294,7 +294,7 @@
         "LoadBalancerNames": [
           { "Ref": "ELB" }
         ],
-        "MinSize": "3",
+        "MinSize": "0",
         "MaxSize": "5",
         "DesiredCapacity": { "Ref": "ClusterSize" },
         "Tags": [
