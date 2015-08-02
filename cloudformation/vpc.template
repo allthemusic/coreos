@@ -1,0 +1,137 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "VPC setup for CoreOS cluster.",
+  "Parameters": {},
+  "Mappings": {
+    "SubnetConfig": {
+      "VPC": {
+        "CIDR": "10.0.0.0/16"
+      }
+    }
+  },
+  "Resources": {
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "CidrBlock": { "Fn::FindInMap": [ "SubnetConfig", "VPC", "CIDR" ] },
+        "Tags": [
+          { "Key": "Name", "Value": "coreos-cluster" }
+        ]
+      }
+    },
+    "Subnet1a": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "AvailabilityZone": "us-east-1a",
+        "CidrBlock": "10.0.0.0/24",
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "Subnet1c": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "AvailabilityZone": "us-east-1c",
+        "CidrBlock": "10.0.1.0/24",
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "Subnet1d": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "AvailabilityZone": "us-east-1d",
+        "CidrBlock": "10.0.2.0/24",
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "Subnet1e": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "AvailabilityZone": "us-east-1e",
+        "CidrBlock": "10.0.3.0/24",
+        "MapPublicIpOnLaunch": true
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": { }
+    },
+    "GatewayToInternet": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" },
+        "InternetGatewayId": { "Ref": "InternetGateway" }
+      }
+    },
+    "PrimaryRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": { "Ref": "VPC" }
+      }
+    },
+    "PrimaryRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "GatewayToInternet",
+      "Properties": {
+        "RouteTableId": { "Ref": "PrimaryRouteTable" },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": { "Ref": "InternetGateway" }
+      }
+    },
+    "PrimarySubnetRouteTableAssociation1a": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "Subnet1a" },
+        "RouteTableId": { "Ref": "PrimaryRouteTable" }
+      }
+    },
+    "PrimarySubnetRouteTableAssociation1c": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "Subnet1c" },
+        "RouteTableId": { "Ref": "PrimaryRouteTable" }
+      }
+    },
+    "PrimarySubnetRouteTableAssociation1d": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "Subnet1d" },
+        "RouteTableId": { "Ref": "PrimaryRouteTable" }
+      }
+    },
+    "PrimarySubnetRouteTableAssociation1e": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": { "Ref": "Subnet1e" },
+        "RouteTableId": { "Ref": "PrimaryRouteTable" }
+      }
+    }
+  },
+  "Outputs": {
+    "VPCId": {
+      "Description": "VPCId of the newly created VPC",
+      "Value": { "Ref": "VPC" }
+    },
+    "Subnet1a": {
+      "Description": "SubnetId of the public subnet",
+      "Value": { "Ref": "Subnet1a" }
+    },
+    "Subnet1c": {
+      "Description": "SubnetId of the public subnet",
+      "Value": { "Ref": "Subnet1c" }
+    },
+    "Subnet1d": {
+      "Description": "SubnetId of the public subnet",
+      "Value": { "Ref": "Subnet1d" }
+    },
+    "Subnet1e": {
+      "Description": "SubnetId of the public subnet",
+      "Value": { "Ref": "Subnet1e" }
+    }
+  }
+}

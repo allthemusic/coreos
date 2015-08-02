@@ -12,3 +12,4 @@ ExecStop=/usr/bin/docker kill vulcan
 
 [X-Fleet]
 Global=true
+MachineMetadata=role=workers

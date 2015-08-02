@@ -1,12 +1,13 @@
 (configure 'aws_region "us-west-2")
 
 (define stack-name "coreos-stack")
-(define cluster-size "1")
+(define core-cluster-size "1")
+(define worker-cluster-size "1")
 
 (resource io/http_request "DiscoveryURL" nil
-          'url (join "=" "https://discovery.etcd.io/new?size" cluster-size))
+          'url (join "=" "https://discovery.etcd.io/new?size" core-cluster-size))
 
-(define discovery-url "https://discovery.etcd.io/ed718f2bb2cfadf33e1b4a6ef00de12c")
+; (define discovery-url "https://discovery.etcd.io/ed718f2bb2cfadf33e1b4a6ef00de12c")
 
 (resource aws/cloud_formation/stack nil (list (dep 'discovery io/http_request "DiscoveryURL"))
           'name "coreos"
@@ -20,16 +21,22 @@
                           'name "KeyPair"
                           'value "main")
                         (aws/cloud_formation/parameter
-                          'name "ClusterSize"
-                          'value "1")
+                          'name "CoreClusterSize"
+                          'value core-cluster-size)
+                        (aws/cloud_formation/parameter
+                          'name "WorkerClusterSize"
+                          'value worker-cluster-size)
                         (aws/cloud_formation/parameter
                           'name "DiscoveryURL"
-                          ; 'value `(discovery 'response)
-                          'value discovery-url
+                          'value `(discovery 'response)
+                          ; 'value discovery-url
                           )
                         (aws/cloud_formation/parameter
-                          'name "InstanceType"
-                          'value "t2.medium")))
+                          'name "WorkerInstanceType"
+                          'value "t2.medium")
+                        (aws/cloud_formation/parameter
+                          'name "CoreInstanceType"
+                          'value "t2.micro")))
 
 
 (action aws/cloud_formation/wait_stack nil (list (dep 'stack aws/cloud_formation/stack nil))
