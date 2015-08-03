@@ -5,21 +5,22 @@ Requires=docker.service
 
 [Service]
 Restart=always
-RestartSec=10s
-
 TimeoutStartSec=0
-
 ExecStartPre=-/usr/bin/docker rm -f ipfs
+ExecStartPre=-/usr/bin/docker rm -f ipfs-data
 ExecStartPre=-/usr/bin/docker pull jbenet/go-ipfs
-ExecStartPre=/usr/bin/mkdir -p /data/ipfs
-ExecStartPre=/usr/bin/chmod a+rwx /data/ipfs
+ExecStartPre=/usr/bin/docker run \
+  --name ipfs-data \
+  --entrypoint='/bin/sh' \
+  --user=root \
+  jbenet/go-ipfs \
+  -c 'chown ipfs:ipfs /data/ipfs'
 ExecStartPre=/usr/bin/docker run \
   --rm \
-  -v /data/ipfs:/data/ipfs \
+  --volumes-from=ipfs-data \
   --entrypoint='/bin/sh' \
   jbenet/go-ipfs \
   -c "\
-    chown ipfs:ipfs /data/ipfs; \
     ipfs init; \
     ipfs config Addresses.API /ip4/0.0.0.0/tcp/5001; \
     ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/3024; \
@@ -31,13 +32,13 @@ ExecStart=/usr/bin/docker run \
   -p 3024:3024 \
   -p 8001:8001 \
   --memory=1G \
-  -v /data/ipfs:/data/ipfs \
+  --volumes-from=ipfs-data \
   jbenet/go-ipfs
 ExecStartPost=/bin/bash -c \
   "/usr/bin/etcdctl set /ipfs/%m/peer-id \
     $(/usr/bin/docker run \
       --rm \
-      -v /data/ipfs:/data/ipfs \
+      --volumes-from=ipfs-data \
       realguess/jq \
       sh -c 'jq -r .Identity.PeerID < /data/ipfs/config' \
     ) \

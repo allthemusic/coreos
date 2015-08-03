@@ -3,16 +3,21 @@ Description=BridgeFog Fog Headless node
 After=docker.service
 Requires=docker.service
 After=ipfs.service
-Requires=ipfs.service
+BindsTo=ipfs.service
 
 [Service]
+Restart=always
+RestartSec=10s
+
 TimeoutStartSec=0
+
 ExecStartPre=-/usr/bin/docker rm -f %p
 ExecStartPre=/usr/bin/docker pull bridgefog/fog-desktop
 ExecStart=/usr/bin/docker run \
   --rm \
   --name %p \
   --link ipfs:ipfs \
+  --memory=900m \
   bridgefog/fog-desktop \
   headless-node
 ExecStop=/usr/bin/docker stop -t 5 %p
@@ -20,4 +25,3 @@ ExecStop=/usr/bin/docker stop -t 5 %p
 [X-Fleet]
 MachineOf=ipfs.service
 Conflicts=%p@*.service
-MachineMetadata=role=workers

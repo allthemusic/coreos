@@ -4,12 +4,12 @@
 (define core-cluster-size "1")
 (define worker-cluster-size "1")
 
-(resource io/http_request "DiscoveryURL" nil
-          'url (join "=" "https://discovery.etcd.io/new?size" core-cluster-size))
+(resource io/get_uri "DiscoveryURL" nil
+          'uri (join "=" "https://discovery.etcd.io/new?size" core-cluster-size))
 
 ; (define discovery-url "https://discovery.etcd.io/ed718f2bb2cfadf33e1b4a6ef00de12c")
 
-(resource aws/cloud_formation/stack nil (list (dep 'discovery io/http_request "DiscoveryURL"))
+(resource aws/cloud_formation/stack nil (list (dep 'discovery io/get_uri "DiscoveryURL"))
           'name "coreos"
           'template_url "file://../cloudformation/coreos-stack.template"
           'timeout_in_minutes 600
@@ -28,7 +28,7 @@
                           'value worker-cluster-size)
                         (aws/cloud_formation/parameter
                           'name "DiscoveryURL"
-                          'value `(discovery 'response)
+                          'value `(discovery 'contents)
                           ; 'value discovery-url
                           )
                         (aws/cloud_formation/parameter
