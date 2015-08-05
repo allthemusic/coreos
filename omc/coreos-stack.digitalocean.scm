@@ -1,4 +1,5 @@
 (define stack-name "coreos-stack")
+(define core-cluster-size 1)
 (define region "sfo1")
 
 (resource io/get_uri "DiscoveryURL" nil
