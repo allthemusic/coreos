@@ -1,4 +1,3 @@
-(define stack-name "coreos-stack")
 (define core-cluster-size 1)
 (define region "sfo1")
 
@@ -11,10 +10,11 @@
           'uri "file:../cloud-config/digitalocean.yml")
 
 (resource mustache/render "cloud-config" (list (dep 'template io/get_uri "cloud-config")
-                                        (dep 'discovery io/get_uri "DiscoveryURL"))
+                                               (dep 'discovery io/get_uri "DiscoveryURL"))
           'template `(template 'contents)
           'bindings (vector
                       (mustache/binding "discovery_url" `(discovery 'contents))
+                      ; (mustache/binding "discovery_url" discovery-url)
                       (mustache/binding "fleet_metadata" (join "=" "region" region))))
 
 (action coreos/validate_cloud_config "cloud-config" (list (dep 'cloud-config mustache/render "cloud-config"))
