@@ -15,6 +15,7 @@ ExecStartPre=-/usr/bin/docker rm -f %p
 ExecStartPre=/usr/bin/docker pull bridgefog/fog-desktop
 ExecStart=/usr/bin/docker run \
   --rm \
+  -t \
   --name %p \
   --link ipfs:ipfs \
   --memory=900m \
