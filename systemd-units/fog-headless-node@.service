@@ -17,7 +17,7 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -t \
   --name %p \
-  --link ipfs:ipfs \
+  -e IPFS_PORT_5001_TCP=tcp://172.17.42.1:5001 \
   --memory=900m \
   bridgefog/fog-desktop \
   headless-node

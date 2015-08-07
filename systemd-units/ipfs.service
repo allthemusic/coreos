@@ -28,8 +28,7 @@ ExecStartPre=/usr/bin/docker run \
 ExecStart=/usr/bin/docker run \
   --rm \
   --name ipfs \
-  -p 3024:3024 \
-  -p 8001:8001 \
+  --net=host \
   --memory=1G \
   -v /data/ipfs:/data/ipfs \
   jbenet/go-ipfs
